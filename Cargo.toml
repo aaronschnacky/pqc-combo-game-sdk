@@ -1,0 +1,59 @@
+[package]
+name = "pqc-combo-game-sdk"
+version = "0.0.1"
+edition = "2021"
+description = "FIPS 140-3 ready game crypto: AES-GCM-SIV + SHAKE + HMAC-DRBG for Unity, Unreal, Godot"
+license = "MIT"
+keywords = ["game", "cryptography", "aes-gcm-siv", "fips", "drbg"]
+categories = ["cryptography", "game-development", "no-std"]
+repository = "https://github.com/AaronSchnacky/pqc-combo-game-sdk"
+readme = "README.md"
+authors = ["Aaron Schnacky <aaronschnacky@gmail.com>"]
+homepage = "https://www.pqc-combo.com"
+rust-version = "1.70"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lib]
+name = "pqc_combo_game_sdk"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["std", "aes", "shake", "crngt"]
+std = ["alloc", "aes-gcm-siv?/std", "sha3/std", "zeroize/std", "dep:rand"]
+alloc = ["aes-gcm-siv?/alloc", "zeroize/alloc"]
+aes = ["dep:aes-gcm-siv", "alloc"]
+shake = ["dep:sha3"]
+crngt = ["dep:sha3"]  # HMAC-DRBG requires SHA3
+ffi = []
+
+[dependencies]
+zeroize = { version = "1.8", default-features = false, features = ["derive"] }
+aes-gcm-siv = { version = "0.11", optional = true, default-features = false, features = ["aes"] }
+sha3 = { version = "0.10", optional = true, default-features = false }
+rand = { version = "0.8", optional = true, default-features = false, features = ["std", "std_rng"] }
+
+[dev-dependencies]
+rand = "0.8"
+serial_test = "3.0"
+
+[profile.release]
+panic = "abort"
+opt-level = "z"
+lto = true
+strip = true
+codegen-units = 1
+
+[profile.release-with-debug]
+inherits = "release"
+strip = false
+debug = true
+
+[profile.dev]
+panic = "abort"
+
+# Platform-specific optimizations
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.2", features = ["js"] }
