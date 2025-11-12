@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------
 // PQC-COMBO-GAME-SDK
 // INTELLECTUAL PROPERTY: OFFERED FOR ACQUISITION
-// NOVEMBER 12, 2025 — @AaronSchnacky (US)
+// NOVEMBER 12, 2025 – @AaronSchnacky (US)
 // ------------------------------------------------------------------------
 // Copyright © 2025 Aaron Schnacky. All rights reserved.
 // License: MIT (publicly auditable for verification)
@@ -10,7 +10,7 @@
 //
 // Contact: aaronschnacky@gmail.com
 // ------------------------------------------------------------------------
-// src/lib.rs — pqc-combo-game-sdk v0.1.0
+// src/lib.rs – pqc-combo-game-sdk v0.1.0
 // Production-ready game cryptography with real FIPS 140-3 compliance
 
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -60,17 +60,17 @@ extern crate alloc;
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 
-use zeroize::ZeroizeOnDrop;
 use core::sync::atomic::{AtomicBool, Ordering};
+use zeroize::ZeroizeOnDrop;
 
 /// AES-256-GCM-SIV key (32 bytes)
 pub type Key = [u8; 32];
-/// Nonce (12 bytes) — can be reused safely with GCM-SIV
+/// Nonce (12 bytes) – can be reused safely with GCM-SIV
 pub type Nonce = [u8; 12];
 /// Procedural seed output
 pub type Seed = [u8; 64];
 
-/// FIPS 140-3 error state — thread-safe atomic flag
+/// FIPS 140-3 error state – thread-safe atomic flag
 static ERROR_STATE: AtomicBool = AtomicBool::new(false);
 
 /// Self-test completion flag
@@ -97,22 +97,20 @@ pub fn run_power_on_self_tests() -> Result<(), &'static str> {
         let nonce = [0x00u8; 12];
         let plaintext = b"FIPS140-3 KAT";
         let aad = b"";
-        
+
         match encrypt_save(&key, &nonce, plaintext, aad) {
-            Ok(ct) => {
-                match decrypt_save(&key, &nonce, &ct, aad) {
-                    Ok(pt) => {
-                        if pt != plaintext {
-                            return Err("AES-GCM-SIV KAT failed: plaintext mismatch");
-                        }
+            Ok(ct) => match decrypt_save(&key, &nonce, &ct, aad) {
+                Ok(pt) => {
+                    if pt != plaintext {
+                        return Err("AES-GCM-SIV KAT failed: plaintext mismatch");
                     }
-                    Err(_) => return Err("AES-GCM-SIV KAT failed: decrypt error"),
                 }
-            }
+                Err(_) => return Err("AES-GCM-SIV KAT failed: decrypt error"),
+            },
             Err(_) => return Err("AES-GCM-SIV KAT failed: encrypt error"),
         }
     }
-    
+
     // Test 2: SHAKE256 Known Answer Test
     #[cfg(feature = "shake")]
     {
@@ -127,22 +125,23 @@ pub fn run_power_on_self_tests() -> Result<(), &'static str> {
             return Err("SHAKE256 KAT failed: non-deterministic");
         }
     }
-    
+
     // Test 3: CRNGT health tests
     #[cfg(feature = "crngt")]
     {
         let mut rng = Crngt::new_without_self_test()?;
         // Run a quick sanity check instead of full startup tests
         let mut test_output = [0u8; 32];
-        rng.drbg.generate(&mut test_output)
+        rng.drbg
+            .generate(&mut test_output)
             .map_err(|_| "CRNGT basic generation test failed")?;
-        
+
         // Ensure output is not all zeros
         if test_output == [0u8; 32] {
             return Err("CRNGT generated all zeros");
         }
     }
-    
+
     SELF_TEST_PASSED.store(true, Ordering::SeqCst);
     Ok(())
 }
@@ -199,12 +198,12 @@ pub fn encrypt_save(
     };
 
     let cipher = Aes256GcmSiv::new(key.into());
-    
+
     let payload = Payload {
         msg: plaintext,
         aad: associated_data,
     };
-    
+
     cipher
         .encrypt(nonce.into(), payload)
         .map_err(|_| "AES-GCM-SIV encrypt failed")
@@ -244,21 +243,19 @@ pub fn decrypt_save(
     };
 
     let cipher = Aes256GcmSiv::new(key.into());
-    
+
     let payload = Payload {
         msg: ciphertext,
         aad: associated_data,
     };
-    
-    cipher
-        .decrypt(nonce.into(), payload)
-        .map_err(|_| {
-            enter_error_state();
-            "AES-GCM-SIV decrypt failed → CSP wiped"
-        })
+
+    cipher.decrypt(nonce.into(), payload).map_err(|_| {
+        enter_error_state();
+        "AES-GCM-SIV decrypt failed → CSP wiped"
+    })
 }
 
-/// SHAKE256 XOF — deterministic procedural seeds
+/// SHAKE256 XOF – deterministic procedural seeds
 ///
 /// # Example
 ///
@@ -282,7 +279,7 @@ pub fn shake256(input: &[u8]) -> Seed {
     output
 }
 
-/// SHAKE128 XOF — faster variant for 128-bit security
+/// SHAKE128 XOF – faster variant for 128-bit security
 ///
 /// # Example
 ///
@@ -305,17 +302,17 @@ pub fn shake128(input: &[u8], output_len: usize) -> Vec<u8> {
     output
 }
 
-// ──────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────
 // FIPS 140-3 Compliant DRBG (Deterministic Random Bit Generator)
 // Using HMAC-DRBG with SHA-256 (SP 800-90A)
-// ──────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────
 
 /// HMAC-DRBG state for FIPS 140-3 compliance
 #[cfg(feature = "crngt")]
 #[derive(ZeroizeOnDrop)]
 struct HmacDrbgState {
-    key: [u8; 32],    // HMAC key (K)
-    value: [u8; 32],  // Internal state (V)
+    key: [u8; 32],   // HMAC key (K)
+    value: [u8; 32], // Internal state (V)
     reseed_counter: u64,
     health_ok: bool,
 }
@@ -323,7 +320,7 @@ struct HmacDrbgState {
 #[cfg(feature = "crngt")]
 impl HmacDrbgState {
     const RESEED_INTERVAL: u64 = 10_000; // Reseed every 10K requests
-    
+
     fn new(entropy: &[u8]) -> Self {
         let mut state = Self {
             key: [0x01u8; 32],
@@ -334,66 +331,66 @@ impl HmacDrbgState {
         state.update(Some(entropy));
         state
     }
-    
+
     fn update(&mut self, provided_data: Option<&[u8]>) {
         // HMAC-DRBG Update function (SP 800-90A Section 10.1.2.2)
         use sha3::{Digest, Sha3_256};
-        
+
         // K = HMAC(K, V || 0x00 || provided_data)
         let mut hasher = Sha3_256::new();
-        hasher.update(&self.value);
-        hasher.update(&[0x00]);
+        hasher.update(self.value);
+        hasher.update([0x00]);
         if let Some(data) = provided_data {
             hasher.update(data);
         }
-        hasher.update(&self.key);
+        hasher.update(self.key);
         self.key.copy_from_slice(&hasher.finalize());
-        
+
         // V = HMAC(K, V)
         let mut hasher = Sha3_256::new();
-        hasher.update(&self.value);
-        hasher.update(&self.key);
+        hasher.update(self.value);
+        hasher.update(self.key);
         self.value.copy_from_slice(&hasher.finalize());
-        
+
         if provided_data.is_some() {
             // K = HMAC(K, V || 0x01 || provided_data)
             let mut hasher = Sha3_256::new();
-            hasher.update(&self.value);
-            hasher.update(&[0x01]);
+            hasher.update(self.value);
+            hasher.update([0x01]);
             if let Some(data) = provided_data {
                 hasher.update(data);
             }
-            hasher.update(&self.key);
+            hasher.update(self.key);
             self.key.copy_from_slice(&hasher.finalize());
-            
+
             // V = HMAC(K, V)
             let mut hasher = Sha3_256::new();
-            hasher.update(&self.value);
-            hasher.update(&self.key);
+            hasher.update(self.value);
+            hasher.update(self.key);
             self.value.copy_from_slice(&hasher.finalize());
         }
     }
-    
+
     fn generate(&mut self, output: &mut [u8]) -> Result<(), &'static str> {
         if self.reseed_counter >= Self::RESEED_INTERVAL {
             return Err("Reseed required");
         }
-        
+
         use sha3::{Digest, Sha3_256};
-        
+
         let mut offset = 0;
         while offset < output.len() {
             // V = HMAC(K, V)
             let mut hasher = Sha3_256::new();
-            hasher.update(&self.value);
-            hasher.update(&self.key);
+            hasher.update(self.value);
+            hasher.update(self.key);
             self.value.copy_from_slice(&hasher.finalize());
-            
+
             let to_copy = core::cmp::min(32, output.len() - offset);
             output[offset..offset + to_copy].copy_from_slice(&self.value[..to_copy]);
             offset += to_copy;
         }
-        
+
         self.update(None);
         self.reseed_counter += 1;
         Ok(())
@@ -443,39 +440,40 @@ impl Crngt {
         check_self_test()?;
         Self::new_without_self_test()
     }
-    
+
     /// Internal constructor without self-test check
     pub(crate) fn new_without_self_test() -> Result<Self, &'static str> {
         let mut entropy = [0u8; 48];
-        
+
         // Collect entropy from system RNG
         #[cfg(all(feature = "std", feature = "crngt"))]
         {
             use rand::RngCore;
             rand::thread_rng().fill_bytes(&mut entropy);
         }
-        
+
         #[cfg(not(all(feature = "std", feature = "crngt")))]
         {
             // For no_std, require user to provide entropy
             return Err("no_std requires external entropy source");
         }
-        
+
         let mut rng = Self {
             drbg: HmacDrbgState::new(&entropy),
             last_output: [0u8; 32],
             rep_count: 0,
             sample_count: 0,
         };
-        
+
         // Generate first output for comparison
-        rng.drbg.generate(&mut rng.last_output)
+        rng.drbg
+            .generate(&mut rng.last_output)
             .map_err(|_| "Initial DRBG generation failed")?;
-        
+
         // Skip startup tests in new_without_self_test (they're run separately in POST)
         Ok(rng)
     }
-    
+
     /// Create from provided entropy (for no_std or custom sources)
     ///
     /// # Example
@@ -492,24 +490,25 @@ impl Crngt {
     /// ```
     pub fn from_entropy(entropy: &[u8]) -> Result<Self, &'static str> {
         check_self_test()?;
-        
+
         if entropy.len() < 32 {
             return Err("Insufficient entropy (need at least 32 bytes)");
         }
-        
+
         let mut rng = Self {
             drbg: HmacDrbgState::new(entropy),
             last_output: [0u8; 32],
             rep_count: 0,
             sample_count: 0,
         };
-        
-        rng.drbg.generate(&mut rng.last_output)
+
+        rng.drbg
+            .generate(&mut rng.last_output)
             .map_err(|_| "Initial DRBG generation failed")?;
-        
+
         Ok(rng)
     }
-    
+
     /// Run FIPS 140-3 startup health tests
     ///
     /// This performs comprehensive statistical tests and should be run
@@ -521,35 +520,35 @@ impl Crngt {
         if self.drbg.generate(&mut previous).is_err() {
             return false;
         }
-        
+
         // Test 20 consecutive outputs (reduced from 50 for doc-tests)
         for _ in 0..20 {
             let mut output = [0u8; 32];
             if self.drbg.generate(&mut output).is_err() {
                 return false;
             }
-            
+
             if output == previous {
                 // Immediate repetition detected in startup test
                 return false;
             }
-            
+
             previous = output;
         }
-        
+
         // Adaptive Proportion Test (APT) - check for statistical bias
         let mut byte_counts = [0u32; 256];
-        
+
         // Collect 1024 samples (reduced from 4096 for faster doc-tests)
         for _ in 0..1024 {
             let mut byte = [0u8; 1];
             if self.drbg.generate(&mut byte).is_err() {
                 return false;
             }
-            
+
             byte_counts[byte[0] as usize] += 1;
         }
-        
+
         // Each byte value should appear roughly 4 times on average (1024/256)
         // Allow variance: 0 to 12 appearances is acceptable (relaxed for smaller sample)
         for count in &byte_counts {
@@ -557,10 +556,10 @@ impl Crngt {
                 return false;
             }
         }
-        
+
         true
     }
-    
+
     /// Fill array with random bytes (with continuous health testing)
     ///
     /// # Example
@@ -581,16 +580,15 @@ impl Crngt {
             enter_error_state();
             return Err("RNG health check failed");
         }
-        
+
         let mut output = [0u8; N];
-        
+
         // Generate output
-        self.drbg.generate(&mut output)
-            .map_err(|_| {
-                enter_error_state();
-                "DRBG generation failed"
-            })?;
-        
+        self.drbg.generate(&mut output).map_err(|_| {
+            enter_error_state();
+            "DRBG generation failed"
+        })?;
+
         // FIPS 140-3 Continuous Repetition Count Test (RCT)
         // Only test if we have enough output and haven't just initialized
         if N >= 32 && self.sample_count > 0 {
@@ -607,59 +605,59 @@ impl Crngt {
                 self.rep_count = 0;
             }
         }
-        
+
         // Update last output for next comparison
         if N >= 32 {
             self.last_output.copy_from_slice(&output[0..32]);
         }
-        
+
         self.sample_count += 1;
-        
+
         // Periodic Adaptive Proportion Test (every 10000 samples, not 1000)
         if self.sample_count % 10000 == 0 && !self.run_apt_test() {
             self.drbg.health_ok = false;
             enter_error_state();
             return Err("APT failure: bias detected");
         }
-        
+
         Ok(output)
     }
-    
+
     /// Generate random bytes into slice
     pub fn fill_slice(&mut self, output: &mut [u8]) -> Result<(), &'static str> {
         if !self.drbg.health_ok || is_error_state() {
             enter_error_state();
             return Err("RNG health check failed");
         }
-        
-        self.drbg.generate(output)
-            .map_err(|_| {
-                enter_error_state();
-                "DRBG generation failed"
-            })
+
+        self.drbg.generate(output).map_err(|_| {
+            enter_error_state();
+            "DRBG generation failed"
+        })
     }
-    
+
     /// Reseed the DRBG with fresh entropy
     pub fn reseed(&mut self, entropy: &[u8]) -> Result<(), &'static str> {
         if entropy.len() < 32 {
             return Err("Insufficient entropy for reseed");
         }
-        
+
         self.drbg = HmacDrbgState::new(entropy);
-        self.drbg.generate(&mut self.last_output)
+        self.drbg
+            .generate(&mut self.last_output)
             .map_err(|_| "Reseed generation failed")?;
         self.rep_count = 0;
-        
+
         Ok(())
     }
-    
+
     /// Adaptive Proportion Test - checks for statistical bias
     fn run_apt_test(&mut self) -> bool {
         let mut samples = [0u8; 256];
         if self.drbg.generate(&mut samples).is_err() {
             return false;
         }
-        
+
         // Count occurrences of first byte value
         let first_value = samples[0];
         let mut count = 0;
@@ -668,7 +666,7 @@ impl Crngt {
                 count += 1;
             }
         }
-        
+
         // FIPS 140-3 cutoff: should not exceed 15 repetitions in 256 samples
         // (for alpha = 2^-20, this is the standard cutoff)
         count <= 15
@@ -698,22 +696,35 @@ impl SecretKey {
     pub fn new(key: Key) -> Self {
         Self { key }
     }
-    
+
     /// Get reference to key (use carefully)
     pub fn as_bytes(&self) -> &[u8; 32] {
         &self.key
     }
 }
 
-// ──────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────
 // FFI for Unity/Unreal/Godot
-// ──────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────
 
+/// Foreign Function Interface (FFI) bindings for C/C++ game engines
+///
+/// This module provides C-compatible functions for integration with
+/// Unity, Unreal Engine, Godot, and other engines that use C FFI.
 #[cfg(all(feature = "ffi", feature = "shake"))]
 pub mod ffi {
     use super::*;
 
     /// FFI: Run power-on self-tests (call once at game startup)
+    ///
+    /// # Safety
+    ///
+    /// This function is safe to call from C/C++.
+    ///
+    /// # Returns
+    ///
+    /// - `0` on success
+    /// - `-1` on failure
     #[no_mangle]
     pub extern "C" fn game_crypto_init() -> i32 {
         match run_power_on_self_tests() {
@@ -723,8 +734,22 @@ pub mod ffi {
     }
 
     /// FFI: SHAKE256 hash function
+    ///
+    /// # Safety
+    ///
+    /// This function dereferences raw pointers and is therefore unsafe.
+    /// The caller must ensure:
+    /// - `input` points to valid memory of at least `input_len` bytes
+    /// - `output` points to valid writable memory of at least 64 bytes
+    /// - Both pointers are properly aligned
+    /// - Memory regions don't overlap in unsafe ways
+    ///
+    /// # Returns
+    ///
+    /// - `0` on success
+    /// - `-1` if either pointer is null
     #[no_mangle]
-    pub extern "C" fn game_crypto_shake256(
+    pub unsafe extern "C" fn game_crypto_shake256(
         input: *const u8,
         input_len: usize,
         output: *mut u8,
@@ -733,24 +758,26 @@ pub mod ffi {
             return -1;
         }
 
-        let input_slice = unsafe { core::slice::from_raw_parts(input, input_len) };
+        let input_slice = core::slice::from_raw_parts(input, input_len);
         let seed = shake256(input_slice);
-        unsafe {
-            core::ptr::copy_nonoverlapping(seed.as_ptr(), output, 64);
-        }
+        core::ptr::copy_nonoverlapping(seed.as_ptr(), output, 64);
         0
     }
-    
+
     /// FFI: Check if crypto module is in error state
+    ///
+    /// # Safety
+    ///
+    /// This function is safe to call from C/C++.
     #[no_mangle]
     pub extern "C" fn game_crypto_is_error() -> bool {
         is_error_state()
     }
 }
 
-// ──────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────
 // Tests
-// ──────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
@@ -776,7 +803,7 @@ mod tests {
     fn encrypt_decrypt_roundtrip() {
         setup();
         run_power_on_self_tests().unwrap();
-        
+
         let key = [0x42u8; 32];
         let nonce = [0x13u8; 12];
         let data = b"hello game save";
@@ -786,19 +813,19 @@ mod tests {
         let pt = decrypt_save(&key, &nonce, &ct, aad).unwrap();
         assert_eq!(pt, data);
     }
-    
+
     #[test]
     #[serial]
     #[cfg(all(feature = "aes", feature = "alloc"))]
     fn decrypt_failure_triggers_error_state() {
         setup();
         run_power_on_self_tests().unwrap();
-        
+
         let key = [0x42u8; 32];
         let nonce = [0x13u8; 12];
         let bad_ciphertext = b"not valid ciphertext";
         let aad = b"";
-        
+
         let result = decrypt_save(&key, &nonce, bad_ciphertext, aad);
         assert!(result.is_err());
         assert!(is_error_state());
@@ -811,7 +838,7 @@ mod tests {
         let seed2 = shake256(b"player-42");
         assert_eq!(seed1, seed2);
     }
-    
+
     #[test]
     #[cfg(feature = "shake")]
     fn shake256_different_inputs() {
@@ -835,40 +862,40 @@ mod tests {
     fn crngt_basic() {
         setup();
         run_power_on_self_tests().expect("POST failed");
-        
+
         let mut rng = Crngt::new().expect("RNG creation failed");
         let bytes1 = rng.fill_bytes::<32>().expect("fill_bytes 1 failed");
         let bytes2 = rng.fill_bytes::<32>().expect("fill_bytes 2 failed");
         assert_ne!(bytes1, bytes2, "RNG produced identical outputs");
     }
-    
+
     #[test]
     #[serial]
     #[cfg(feature = "crngt")]
     fn crngt_startup_tests() {
         setup();
         run_power_on_self_tests().expect("POST failed");
-        
+
         let mut rng = Crngt::new().expect("RNG creation failed");
         assert!(rng.run_startup_tests(), "Startup tests failed");
     }
-    
+
     #[test]
     #[serial]
     #[cfg(feature = "crngt")]
     fn crngt_large_output() {
         setup();
         run_power_on_self_tests().expect("POST failed");
-        
+
         let mut rng = Crngt::new().expect("RNG creation failed");
         let bytes = rng.fill_bytes::<1024>().expect("fill_bytes failed");
-        
+
         // Check for basic randomness - no byte should repeat excessively
         let mut counts = [0u32; 256];
         for &byte in &bytes {
             counts[byte as usize] += 1;
         }
-        
+
         // Each byte should appear roughly 4 times on average (1024/256)
         // Allow variance of 0-16 appearances
         for (i, count) in counts.iter().enumerate() {

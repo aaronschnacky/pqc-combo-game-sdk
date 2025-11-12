@@ -1,0 +1,44 @@
+# Rustfmt configuration for pqc-combo-game-sdk
+# This ensures consistent code formatting across the project
+
+# Edition (match Cargo.toml)
+edition = "2021"
+
+# Maximum line width
+max_width = 100
+
+# Indentation
+tab_spaces = 4
+hard_tabs = false
+
+# Imports
+imports_granularity = "Crate"
+group_imports = "StdExternalCrate"
+reorder_imports = true
+
+# Comments
+wrap_comments = true
+comment_width = 100
+normalize_comments = true
+
+# Functions
+fn_single_line = false
+fn_params_layout = "Tall"
+
+# Chains
+chain_width = 60
+
+# Match
+match_block_trailing_comma = true
+
+# Trailing commas
+trailing_comma = "Vertical"
+
+# Use field init shorthand
+use_field_init_shorthand = true
+
+# Format strings
+format_strings = true
+
+# Merge derives
+merge_derives = true
